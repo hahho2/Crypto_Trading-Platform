@@ -2,31 +2,53 @@ package com.jing.service;
 
 import com.jing.model.TwoFactorOTP;
 import com.jing.model.User;
+import com.jing.repository.TwoFactorOtpRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
 public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
+
+    @Autowired
+    private TwoFactorOtpRepository twoFactorOtpRepository;
 
     @Override
     public TwoFactorOTP createTwoFactorOtp(User user, String otp, String jwt) {
-        return null;
+
+        UUID uuid = UUID.randomUUID();
+        String id = uuid.toString();
+
+        TwoFactorOTP twoFactorOTP = new TwoFactorOTP();
+        twoFactorOTP.setOtp(otp);
+        twoFactorOTP.setId(id);
+        twoFactorOTP.setUser(user);
+        twoFactorOTP.setJwt(jwt);
+
+        return twoFactorOtpRepository.save(twoFactorOTP);
     }
 
     @Override
     public TwoFactorOTP findByUser(Long userId) {
-        return null;
+        return twoFactorOtpRepository.findByUserId(userId);
     }
 
     @Override
-    public TwoFactorOTP findById(String id) {
-        return null;
-    }
+public TwoFactorOTP findById(String id) {
+    Optional<TwoFactorOTP> optionalTwoFactorOTP = twoFactorOtpRepository.findById(id);
+    return optionalTwoFactorOTP.orElse(null);
+}
 
     @Override
     public Boolean verifyTwoFactorOtp(TwoFactorOTP twoFactorOtp, String otp) {
-        return null;
+        return twoFactorOtp.getOtp().equals(otp);
     }
 
     @Override
     public void deleteTwoFactorOtp(TwoFactorOTP twoFactorOtp) {
-
+        twoFactorOtpRepository.delete(twoFactorOtp);
     }
 }
+
