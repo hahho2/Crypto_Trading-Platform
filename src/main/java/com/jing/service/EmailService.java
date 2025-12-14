@@ -2,14 +2,18 @@ package com.jing.service;
 
 
 import jakarta.mail.MessagingException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
 
 import jakarta.mail.internet.MimeMessage;
+@Service
 public class EmailService {
 
+    @Autowired
     private JavaMailSender javaMailSender;
 
     //method for send verification otp email
@@ -44,8 +48,11 @@ public class EmailService {
     }
 
     public void sendVerificationOtpEmail(String username, String otp) {
-
-        throw new UnsupportedOperationException("Unimplemented method 'sendVerificationOtpEmail'");
+        try {
+            sendOtpEmail(username, otp);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send OTP email", e);
+        }
     }
 
 
