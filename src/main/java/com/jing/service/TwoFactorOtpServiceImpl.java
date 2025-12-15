@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
@@ -26,6 +28,8 @@ public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
         twoFactorOTP.setId(id);
         twoFactorOTP.setUser(user);
         twoFactorOTP.setJwt(jwt);
+        // set expiry 5 minutes from now
+        twoFactorOTP.setExpiresAt(Instant.now().plus(5, ChronoUnit.MINUTES));
 
         return twoFactorOtpRepository.save(twoFactorOTP);
     }
@@ -43,6 +47,14 @@ public TwoFactorOTP findById(String id) {
 
     @Override
     public Boolean verifyTwoFactorOtp(TwoFactorOTP twoFactorOtp, String otp) {
+        if (twoFactorOtp == null) return false;
+        Instant expiresAt = twoFactorOtp.getExpiresAt();
+        if (expiresAt != null && Instant.now().isAfter(expiresAt)) {
+            // expired: remove entry and fail verification
+            twoFactorOtpRepository.delete(twoFactorOtp);
+            return false;
+        }
+
         return twoFactorOtp.getOtp().equals(otp);
     }
 

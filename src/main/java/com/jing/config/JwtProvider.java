@@ -36,8 +36,11 @@ public class JwtProvider {
     //method for email accesing with jwt token
 
     public static String getEmailFromToken(String token){
+        // Be tolerant of missing "Bearer " prefix to avoid substring errors
+        if (token != null && token.toLowerCase().startsWith("bearer ")) {
+            token = token.substring(7);
+        }
 
-        token = token.substring(7);
         Claims claims = Jwts.parser()
                 .verifyWith(key)
                 .build()

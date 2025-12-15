@@ -10,5 +10,7 @@ public class AuthResponse {
     private String message;
     private boolean isTwoFactorAuthEnable;
     private String session;
+    // OTP expiry timestamp in epoch milliseconds (optional)
+    private Long otpExpiresAt;
 
 }

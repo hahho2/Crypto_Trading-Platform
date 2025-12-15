@@ -3,6 +3,7 @@ package com.jing.service;
 
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -15,6 +16,8 @@ public class EmailService {
 
     @Autowired
     private JavaMailSender javaMailSender;
+    @Value("${spring.mail.username}")
+    private String mailFrom;
 
     //method for send verification otp email
     public void sendOtpEmail(String email,
@@ -30,8 +33,8 @@ public class EmailService {
 
             //Setting email details
             mimeMessageHelper.setSubject(subject);
-
-            mimeMessageHelper.setText(text);
+            mimeMessageHelper.setFrom(mailFrom);
+            mimeMessageHelper.setText(text, false);
             mimeMessageHelper.setTo(email);
 
             //Exception handling for mail sending
@@ -50,8 +53,15 @@ public class EmailService {
     public void sendVerificationOtpEmail(String username, String otp) {
         try {
             sendOtpEmail(username, otp);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send OTP email", e);
+            System.out.println("===========================================");
+            System.out.println("OTP EMAIL SENT to " + username + ": " + otp);
+            System.out.println("===========================================");
+        } catch (Exception e) {
+            // Fallback to console logging if email fails
+            System.out.println("===========================================");
+            System.out.println("EMAIL FAILED - OTP for " + username + ": " + otp);
+            System.out.println("Error: " + e.getMessage());
+            System.out.println("===========================================");
         }
     }
 

@@ -35,6 +35,9 @@ public class AuthController {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> register(@RequestBody User user){
 
@@ -51,12 +54,11 @@ public class AuthController {
 
         User newUser = new User();
         newUser.setEmail(user.getEmail());
-        newUser.setPassword(user.getPassword());
-        newUser.setEmail(user.getEmail());
+        newUser.setPassword(passwordEncoder.encode(user.getPassword()));
         newUser.setFullName(user.getFullName());
 
 
-        User savedUser = userRepository.save(newUser);
+        userRepository.save(newUser);
 
         Authentication auth =
                 new UsernamePasswordAuthenticationToken(
@@ -94,8 +96,6 @@ public class AuthController {
 
 
         //checking if email exists or not
-
-        User isEmailExist=userRepository.findByEmail(user.getEmail());
 
         String username=user.getEmail();
         String password=user.getPassword();
@@ -145,6 +145,9 @@ public class AuthController {
             //In real world application we will send otp to user email or phone number
 
                 res.setSession(newTwoFactorOTP.getId());
+                if (newTwoFactorOTP.getExpiresAt() != null) {
+                    res.setOtpExpiresAt(newTwoFactorOTP.getExpiresAt().toEpochMilli());
+                }
             return new ResponseEntity<>(res, HttpStatus.ACCEPTED);
 
 
@@ -181,7 +184,7 @@ public class AuthController {
         }
 
         //Wrong password exception
-        if (!password.equals(userDetails.getPassword())) {
+        if (!passwordEncoder.matches(password, userDetails.getPassword())) {
             throw new BadCredentialsException("Wrong password");
         }
 
@@ -190,28 +193,77 @@ public class AuthController {
 
 
     }
-
+    //Authentication OTP verification for signin
+    @PostMapping("/verify-signin/{otp}")
     public ResponseEntity<AuthResponse> verifySinginOtp(
         @PathVariable String otp,
-
-
         @RequestParam String id) throws Exception {
-        TwoFactorOTP twoFactorOtp=twoFactorOtpService.findById(id);
+        TwoFactorOTP twoFactorOtp = twoFactorOtpService.findById(id);
 
-
-        if(twoFactorOtpService.verifyTwoFactorOtp(twoFactorOtp, otp)){
-            AuthResponse res=new AuthResponse();
+        if (twoFactorOtp != null && twoFactorOtpService.verifyTwoFactorOtp(twoFactorOtp, otp)) {
+            AuthResponse res = new AuthResponse();
             res.setMessage("2FA Verification Successful");
             res.setTwoFactorAuthEnable(true);
             res.setJwt(twoFactorOtp.getJwt());
-            return new ResponseEntity<>(res, HttpStatus.OK);
 
-            
+            // remove used OTP
+            twoFactorOtpService.deleteTwoFactorOtp(twoFactorOtp);
+
+            return new ResponseEntity<>(res, HttpStatus.OK);
         }
 
-    throw new Exception("Invalid OTP");
+        throw new Exception("Invalid OTP");
+    }
 
-}
+    // Forgot password: send OTP to user's email
+    @PostMapping("/forgot-password")
+    public ResponseEntity<AuthResponse> forgotPassword(@RequestParam String email) throws Exception {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new Exception("User not found");
+        }
+
+        String otp = OtpUtils.generateOTP();
+        TwoFactorOTP old = twoFactorOtpService.findByUser(user.getId());
+        if (old != null) {
+            twoFactorOtpService.deleteTwoFactorOtp(old);
+        }
+
+        TwoFactorOTP twoFactorOTP = twoFactorOtpService.createTwoFactorOtp(user, otp, null);
+        emailService.sendVerificationOtpEmail(email, otp);
+
+        AuthResponse res = new AuthResponse();
+        res.setMessage("OTP sent");
+        res.setSession(twoFactorOTP.getId());
+        if (twoFactorOTP.getExpiresAt() != null) {
+            res.setOtpExpiresAt(twoFactorOTP.getExpiresAt().toEpochMilli());
+        }
+        return new ResponseEntity<>(res, HttpStatus.ACCEPTED);
+    }
+
+    // Verify OTP for forgot-password and set new password
+    @PostMapping("/verify-forgot/{otp}")
+    public ResponseEntity<AuthResponse> verifyForgotPassword(
+        @PathVariable String otp,
+        @RequestParam String id,
+        @RequestParam String newPassword) throws Exception {
+
+        TwoFactorOTP twoFactorOtp = twoFactorOtpService.findById(id);
+        if (twoFactorOtp != null && twoFactorOtpService.verifyTwoFactorOtp(twoFactorOtp, otp)) {
+            User user = twoFactorOtp.getUser();
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+
+            twoFactorOtpService.deleteTwoFactorOtp(twoFactorOtp);
+
+            AuthResponse res = new AuthResponse();
+            res.setMessage("Password reset successful");
+            res.setStatus(true);
+            return new ResponseEntity<>(res, HttpStatus.OK);
+        }
+
+        throw new Exception("Invalid OTP");
+    }
 
 }
 

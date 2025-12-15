@@ -3,7 +3,7 @@ package com.jing.service;
 import com.jing.domain.VerificationType;
 import com.jing.model.TwoFactorAuth;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 
 import com.jing.config.JwtProvider;
 import com.jing.model.User;
@@ -11,7 +11,7 @@ import com.jing.repository.UserRepository;
 
 import java.util.Optional;
 
-@RestController
+@Service
 public class UserServiceImpl implements UserService {
 
     @Autowired

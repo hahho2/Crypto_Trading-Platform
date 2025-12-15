@@ -44,7 +44,11 @@ public class JwtTokenValidator extends OncePerRequestFilter {
                         .getPayload();
 
                 String email = (String) claims.get("email");
-                String authorities = (String) claims.get("authorities");
+                // Token currently stores roles under key "authhorities" (legacy typo)
+                String authorities = (String) claims.get("authhorities");
+                if (authorities == null) {
+                    authorities = ""; // default to no roles instead of throwing
+                }
 
                 List<GrantedAuthority> authorityList =
                         AuthorityUtils.commaSeparatedStringToAuthorityList(authorities);

@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.OneToOne;
 import lombok.Data;
 import jakarta.persistence.Id;
+import java.time.Instant;
 
 
 @Entity
@@ -23,6 +24,9 @@ public class TwoFactorOTP {
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String jwt;
+
+    // OTP expiry timestamp (UTC instant)
+    private Instant expiresAt;
 
 
 }
